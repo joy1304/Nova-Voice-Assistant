@@ -1,63 +1,82 @@
 import speech_recognition as sr
 import webbrowser as wb
+import pyttsx3
+import datetime
+import wikipedia
 
-r = sr.Recognizer()
+# Initialize Voice
+engine = pyttsx3.init()
+engine.setProperty('rate', 180)
 
-with sr.Microphone() as source:
-    print('[search edureka: search video: search write]')
-    print('----SPEAK NOW----')
-    audio = r.listen(source)
+def speak(text):
+    print(f"Assistant: {text}")
+    engine.say(text)
+    engine.runAndWait()
 
-if 'edureka' in r.recognize_google(audio):
+def take_command():
     r = sr.Recognizer()
-    url = 'https://www.edureka.co/'
     with sr.Microphone() as source:
-        print('---SEARCH YOUR QUERY---')
+        # Adjust for ambient noise for better accuracy
+        r.adjust_for_ambient_noise(source, duration=0.5)
+        print("...listening for command...")
         audio = r.listen(source)
 
-        try:
-            get = r.recognize_google(audio)
-            print(get)
-            wb.get().open_new(url+get)
-        except sr.UnknownValueError:
-            print('ERROR!')
-        except sr.RequestError as e:
-            print('FAILED'.format(e))
+    try:
+        query = r.recognize_google(audio, language='en-in')
+        return query.lower()
+    except:
+        return "None"
 
-elif 'video' in r.recognize_google(audio):
-    r = sr.Recognizer()
-    url = 'https://www.youtube.com/results?search_query='
-    with sr.Microphone() as source:
-        print('---SEARCH YOUR QUERY---')
-        audio = r.listen(source)
+def run_assistant():
+    """Main logic for tasks"""
+    speak("I am listening. What can I do for you?")
+    query = take_command()
 
-        try:
-            get = r.recognize_google(audio)
-            print(get)
-            wb.get().open_new(url+get)
-        except sr.UnknownValueError:
-            print('ERROR!')
-        except sr.RequestError as e:
-            print('FAILED'.format(e))
+    if 'edureka' in query:
+        speak("Opening Edureka. What is your query?")
+        search = take_command()
+        wb.open(f"https://www.edureka.co/search/{search}")
+    
+    elif 'video' in query:
+        speak("What should I look up on YouTube?")
+        search = take_command()
+        wb.open(f"https://www.youtube.com/results?search_query={search}")
 
-else:
-    r = sr.Recognizer()
-    def initSpeech():
-        print("LISTENING......")
+    elif 'wikipedia' in query:
+        speak('Searching Wikipedia...')
+        results = wikipedia.summary(query.replace("wikipedia", ""), sentences=2)
+        speak(results)
 
+    elif 'time' in query:
+        time = datetime.datetime.now().strftime('%I:%M %p')
+        speak(f"It is currently {time}")
+
+    elif 'go to sleep' in query:
+        speak("Standing by. Just say my name if you need me.")
+        return False # This exits the active loop
+    
+    return True
+
+if __name__ == "__main__":
+    WAKE_WORD = "nova"
+    print(f"Assistant is IDLE. Say '{WAKE_WORD}' to wake me up.")
+    
+    while True:
+        # Step 1: Passive Listening
+        r = sr.Recognizer()
         with sr.Microphone() as source:
-            print("--PLEASE SAY SOMETHING")
             audio = r.listen(source)
-
-        command = ""
-
+        
         try:
-            command = r.recognize_google(audio)
-        except:
-            print("!!CAN'T HEAR YOU!!")
-
-        print("YOUR COMMAND: ")
-        print(command)
-
-
-    initSpeech()
+            # Check if the wake word was in the snippet of audio
+            voice_input = r.recognize_google(audio).lower()
+            
+            if WAKE_WORD in voice_input:
+                # Step 2: Switch to Active Mode
+                active = True
+                while active:
+                    active = run_assistant()
+                    
+        except Exception:
+            # If it doesn't recognize anything, it just loops back to listening
+            continue
